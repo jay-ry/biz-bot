@@ -2,20 +2,130 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
+// ── Chat conversation data ─────────────────────────────────────────────────
+type ChatMessage = {
+  role: 'bot' | 'user'
+  text: string
+}
+
+const CONVERSATION: ChatMessage[] = [
+  { role: 'bot', text: 'Hi! How can I help you today?' },
+  { role: 'user', text: 'Do you have tables available Friday?' },
+  { role: 'bot', text: 'Yes! We have openings at 7pm and 8:30pm. Want me to book one?' },
+  { role: 'user', text: '7pm for 2 please' },
+  { role: 'bot', text: 'Done! Reservation confirmed for Friday 7pm.' },
+]
+
+// Delays (ms) between each message appearing after the previous one
+const MESSAGE_DELAYS = [0, 900, 1800, 2800, 3700]
+// How long after the last message before restarting the loop
+const LOOP_PAUSE = 2200
+// Offset after hero entrance before first message appears (~1.5s entrance)
+const INITIAL_OFFSET = 1500
+
+// ── Floating orb config ────────────────────────────────────────────────────
+const ORBS = [
+  { top: '18%', left: '8%',  dur: 6.2, yEnd: -32, delay: 0 },
+  { top: '62%', left: '14%', dur: 7.8, yEnd: -24, delay: 1.1 },
+  { top: '38%', left: '22%', dur: 5.4, yEnd: -38, delay: 0.6 },
+  { top: '75%', left: '40%', dur: 8.1, yEnd: -20, delay: 1.8 },
+  { top: '12%', left: '55%', dur: 6.7, yEnd: -30, delay: 0.3 },
+  { top: '50%', left: '68%', dur: 5.9, yEnd: -42, delay: 2.2 },
+  { top: '28%', left: '80%', dur: 7.3, yEnd: -26, delay: 0.9 },
+  { top: '82%', left: '88%', dur: 6.5, yEnd: -36, delay: 1.5 },
+]
+
+// ── Feature card glow colours ──────────────────────────────────────────────
+const CARD_GLOWS = [
+  'rgba(101,254,8,0.22)',
+  'rgba(0,255,255,0.22)',
+  'rgba(191,0,255,0.22)',
+]
+
 export default function LandingPage() {
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // ── Animated chat state ──────────────────────────────────────────────────
+  const [visibleMessages, setVisibleMessages] = useState<ChatMessage[]>([])
+  const [showTyping, setShowTyping] = useState(false)
+  // Track the index of the next bot message that needs a typing indicator
+  const chatCycleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clears all pending timers
+  const clearChatCycle = () => {
+    if (chatCycleRef.current) {
+      clearTimeout(chatCycleRef.current)
+      chatCycleRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    function runCycle() {
+      if (cancelled) return
+      setVisibleMessages([])
+      setShowTyping(false)
+
+      CONVERSATION.forEach((msg, idx) => {
+        const baseDelay = (idx === 0 ? INITIAL_OFFSET : 0) + MESSAGE_DELAYS[idx]
+
+        if (msg.role === 'bot') {
+          // Show typing indicator first
+          timers.push(
+            setTimeout(() => {
+              if (cancelled) return
+              setShowTyping(true)
+            }, baseDelay),
+          )
+          // Replace typing indicator with actual message after ~1s
+          timers.push(
+            setTimeout(() => {
+              if (cancelled) return
+              setShowTyping(false)
+              setVisibleMessages((prev) => [...prev, msg])
+            }, baseDelay + 950),
+          )
+        } else {
+          timers.push(
+            setTimeout(() => {
+              if (cancelled) return
+              setVisibleMessages((prev) => [...prev, msg])
+            }, baseDelay),
+          )
+        }
+      })
+
+      // Schedule next loop
+      const lastDelay = MESSAGE_DELAYS[MESSAGE_DELAYS.length - 1] + 950 + LOOP_PAUSE
+      timers.push(
+        setTimeout(() => {
+          if (!cancelled) runCycle()
+        }, INITIAL_OFFSET + lastDelay),
+      )
+    }
+
+    runCycle()
+
+    return () => {
+      cancelled = true
+      timers.forEach(clearTimeout)
+    }
+  }, [])
+
+  // ── GSAP animations ──────────────────────────────────────────────────────
   useGSAP(
     () => {
       const ctx = gsap.context(() => {
-        // ── Hero entrance ─────────────────────────────────────────
+        // ── Hero entrance ──────────────────────────────────────────
         const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } })
 
         heroTl
@@ -29,7 +139,20 @@ export default function LandingPage() {
             '-=0.5',
           )
 
-        // ── Features section scroll reveal ────────────────────────
+        // ── Floating orbs ──────────────────────────────────────────
+        gsap.utils.toArray<HTMLElement>('.ambient-orb').forEach((orb, i) => {
+          const cfg = ORBS[i]
+          gsap.to(orb, {
+            y: cfg.yEnd,
+            duration: cfg.dur,
+            delay: cfg.delay,
+            ease: 'sine.inOut',
+            yoyo: true,
+            repeat: -1,
+          })
+        })
+
+        // ── Features section scroll reveal ─────────────────────────
         gsap.from('.features-heading', {
           scrollTrigger: {
             trigger: '.features-heading',
@@ -53,6 +176,26 @@ export default function LandingPage() {
           ease: 'power3.out',
         })
 
+        // ── Feature card hover glow ────────────────────────────────
+        gsap.utils.toArray<HTMLElement>('.feature-card').forEach((card, i) => {
+          const glow = CARD_GLOWS[i] ?? CARD_GLOWS[0]
+
+          card.addEventListener('mouseenter', () => {
+            gsap.to(card, {
+              boxShadow: `0 0 28px 5px ${glow}`,
+              duration: 0.3,
+              ease: 'power2.out',
+            })
+          })
+          card.addEventListener('mouseleave', () => {
+            gsap.to(card, {
+              boxShadow: '0 0 0px 0px transparent',
+              duration: 0.4,
+              ease: 'power2.inOut',
+            })
+          })
+        })
+
         // ── CTA banner scroll reveal ───────────────────────────────
         gsap.from('.cta-content', {
           scrollTrigger: {
@@ -73,6 +216,43 @@ export default function LandingPage() {
 
   return (
     <div ref={containerRef} className="bg-black text-white min-h-screen">
+      {/* ── Keyframe definitions ─────────────────────────────────────────── */}
+      <style>{`
+        @keyframes typing-bounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30%            { transform: translateY(-5px); opacity: 1; }
+        }
+        .typing-dot {
+          animation: typing-bounce 1.2s ease-in-out infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes cursor-blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        .typewriter-cursor {
+          animation: cursor-blink 0.85s step-start infinite;
+        }
+        @keyframes cursor-fade-out {
+          0%   { opacity: 1; }
+          80%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        .typewriter-cursor-fade {
+          animation: cursor-fade-out 3.5s ease forwards;
+        }
+
+        @keyframes msg-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .msg-appear {
+          animation: msg-in 0.35s ease forwards;
+        }
+      `}</style>
+
       {/* ── Nav ──────────────────────────────────────────────────── */}
       <header className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 md:px-6 py-4 bg-black/80 backdrop-blur-sm border-b border-zinc-900">
         <div className="flex items-center gap-2">
@@ -106,6 +286,16 @@ export default function LandingPage() {
           }}
         />
 
+        {/* ── Ambient floating orbs ─────────────────────────────── */}
+        {ORBS.map((orb, i) => (
+          <span
+            key={i}
+            aria-hidden="true"
+            className="ambient-orb pointer-events-none absolute w-1.5 h-1.5 rounded-full bg-[#65fe08]/40"
+            style={{ top: orb.top, left: orb.left }}
+          />
+        ))}
+
         <div className="relative w-full max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-24 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* Left — copy */}
           <div className="flex flex-col gap-6">
@@ -115,7 +305,14 @@ export default function LandingPage() {
 
             <h1 className="hero-heading text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
               Your business,{' '}
-              <span className="text-[#65fe08]">always&nbsp;on.</span>
+              <span className="text-[#65fe08]">
+                always&nbsp;on.
+                {/* Typewriter cursor — blinks then fades out after 3.5s */}
+                <span
+                  className="typewriter-cursor typewriter-cursor-fade inline-block ml-0.5 w-[3px] h-[0.85em] align-middle bg-[#65fe08] rounded-sm"
+                  aria-hidden="true"
+                />
+              </span>
             </h1>
 
             <p className="hero-body text-lg text-zinc-400 max-w-xl leading-relaxed">
@@ -139,7 +336,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right — fake chat preview */}
+          {/* Right — animated chat preview */}
           <div className="hero-chat hidden lg:flex justify-end">
             <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl shadow-black">
               {/* Chat header */}
@@ -149,51 +346,40 @@ export default function LandingPage() {
                 <span className="ml-auto text-xs text-zinc-500">Online</span>
               </div>
 
-              {/* Messages */}
-              <div className="flex flex-col gap-3 p-4">
-                {/* Bot */}
-                <div className="flex items-start gap-2">
-                  <div className="shrink-0 w-7 h-7 rounded-full bg-[#65fe08]/20 border border-[#65fe08]/30 flex items-center justify-center text-[10px] font-bold text-[#65fe08]">
-                    B
-                  </div>
-                  <div className="bg-zinc-800 text-sm text-zinc-100 px-3 py-2 rounded-2xl rounded-tl-sm max-w-[80%]">
-                    Hi! How can I help you today?
-                  </div>
-                </div>
+              {/* Messages — dynamically rendered */}
+              <div className="flex flex-col gap-3 p-4 min-h-[220px]">
+                {visibleMessages.map((msg, idx) =>
+                  msg.role === 'bot' ? (
+                    <div key={idx} className="flex items-start gap-2 msg-appear">
+                      <div className="shrink-0 w-7 h-7 rounded-full bg-[#65fe08]/20 border border-[#65fe08]/30 flex items-center justify-center text-[10px] font-bold text-[#65fe08]">
+                        B
+                      </div>
+                      <div className="bg-zinc-800 text-sm text-zinc-100 px-3 py-2 rounded-2xl rounded-tl-sm max-w-[80%]">
+                        {msg.text}
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={idx} className="flex justify-end msg-appear">
+                      <div className="bg-[#65fe08]/10 border border-[#65fe08]/20 text-sm text-zinc-100 px-3 py-2 rounded-2xl rounded-tr-sm max-w-[80%]">
+                        {msg.text}
+                      </div>
+                    </div>
+                  ),
+                )}
 
-                {/* User */}
-                <div className="flex justify-end">
-                  <div className="bg-[#65fe08]/10 border border-[#65fe08]/20 text-sm text-zinc-100 px-3 py-2 rounded-2xl rounded-tr-sm max-w-[80%]">
-                    Do you have tables available Friday?
+                {/* Typing indicator */}
+                {showTyping && (
+                  <div className="flex items-start gap-2 msg-appear">
+                    <div className="shrink-0 w-7 h-7 rounded-full bg-[#65fe08]/20 border border-[#65fe08]/30 flex items-center justify-center text-[10px] font-bold text-[#65fe08]">
+                      B
+                    </div>
+                    <div className="bg-zinc-800 px-3 py-2.5 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
+                      <span className="typing-dot w-1.5 h-1.5 rounded-full bg-zinc-400 inline-block" />
+                      <span className="typing-dot w-1.5 h-1.5 rounded-full bg-zinc-400 inline-block" />
+                      <span className="typing-dot w-1.5 h-1.5 rounded-full bg-zinc-400 inline-block" />
+                    </div>
                   </div>
-                </div>
-
-                {/* Bot */}
-                <div className="flex items-start gap-2">
-                  <div className="shrink-0 w-7 h-7 rounded-full bg-[#65fe08]/20 border border-[#65fe08]/30 flex items-center justify-center text-[10px] font-bold text-[#65fe08]">
-                    B
-                  </div>
-                  <div className="bg-zinc-800 text-sm text-zinc-100 px-3 py-2 rounded-2xl rounded-tl-sm max-w-[80%]">
-                    Yes! We have openings at 7pm and 8:30pm. Want me to book one?
-                  </div>
-                </div>
-
-                {/* User */}
-                <div className="flex justify-end">
-                  <div className="bg-[#65fe08]/10 border border-[#65fe08]/20 text-sm text-zinc-100 px-3 py-2 rounded-2xl rounded-tr-sm max-w-[80%]">
-                    7pm for 2 please
-                  </div>
-                </div>
-
-                {/* Bot */}
-                <div className="flex items-start gap-2">
-                  <div className="shrink-0 w-7 h-7 rounded-full bg-[#65fe08]/20 border border-[#65fe08]/30 flex items-center justify-center text-[10px] font-bold text-[#65fe08]">
-                    B
-                  </div>
-                  <div className="bg-zinc-800 text-sm text-zinc-100 px-3 py-2 rounded-2xl rounded-tl-sm max-w-[80%]">
-                    Done! Reservation confirmed for Friday 7pm.
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Input bar */}
