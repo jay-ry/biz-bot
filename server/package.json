@@ -1,0 +1,22 @@
+{
+  "name": "@local-biz-chatbot/server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.81.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.0.0",
+    "openai": "^6.33.0",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.20.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0"
+  }
+}
