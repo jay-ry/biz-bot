@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -30,6 +30,13 @@ const LOOP_PAUSE = 2200
 // Offset after hero entrance before first message appears (~1.5s entrance)
 const INITIAL_OFFSET = 1500
 
+// ── Typewriter phrases ─────────────────────────────────────────────────────
+const PHRASES = ['always on.', 'never offline.', 'booking 24/7.', 'always ready.']
+const TYPE_SPEED = 75   // ms per character typed
+const DELETE_SPEED = 40 // ms per character deleted
+const PAUSE_FULL = 1600 // ms to hold the completed phrase
+const PAUSE_EMPTY = 320 // ms to pause before typing next phrase
+
 // ── Floating orb config ────────────────────────────────────────────────────
 const ORBS = [
   { top: '18%', left: '8%',  dur: 6.2, yEnd: -32, delay: 0 },
@@ -51,6 +58,53 @@ const CARD_GLOWS = [
 
 export default function LandingPage() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const chatScrollRef = useRef<HTMLDivElement>(null)
+
+  // ── Typewriter state ─────────────────────────────────────────────────────
+  const [typedText, setTypedText] = useState('')
+  const phraseIdxRef = useRef(0)
+  const charIdxRef = useRef(0)
+  const isDeletingRef = useRef(false)
+
+  const tick = useCallback(() => {
+    const phrase = PHRASES[phraseIdxRef.current]
+    const deleting = isDeletingRef.current
+
+    if (!deleting) {
+      // Typing forward
+      charIdxRef.current += 1
+      setTypedText(phrase.slice(0, charIdxRef.current))
+      if (charIdxRef.current === phrase.length) {
+        // Finished typing — pause then start deleting
+        isDeletingRef.current = true
+        return PAUSE_FULL
+      }
+      return TYPE_SPEED
+    } else {
+      // Deleting
+      charIdxRef.current -= 1
+      setTypedText(phrase.slice(0, charIdxRef.current))
+      if (charIdxRef.current === 0) {
+        // Finished deleting — move to next phrase
+        isDeletingRef.current = false
+        phraseIdxRef.current = (phraseIdxRef.current + 1) % PHRASES.length
+        return PAUSE_EMPTY
+      }
+      return DELETE_SPEED
+    }
+  }, [])
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    function schedule(delay: number) {
+      timer = setTimeout(() => {
+        const next = tick()
+        schedule(next)
+      }, delay)
+    }
+    schedule(TYPE_SPEED)
+    return () => clearTimeout(timer)
+  }, [tick])
 
   // ── Animated chat state ──────────────────────────────────────────────────
   const [visibleMessages, setVisibleMessages] = useState<ChatMessage[]>([])
@@ -120,6 +174,12 @@ export default function LandingPage() {
       timers.forEach(clearTimeout)
     }
   }, [])
+
+  // Auto-scroll chat to bottom when messages or typing indicator change
+  useEffect(() => {
+    const el = chatScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [visibleMessages, showTyping])
 
   // ── GSAP animations ──────────────────────────────────────────────────────
   useGSAP(
@@ -233,16 +293,11 @@ export default function LandingPage() {
           50%       { opacity: 0; }
         }
         .typewriter-cursor {
-          animation: cursor-blink 0.85s step-start infinite;
+          animation: cursor-blink 0.7s step-start infinite;
         }
-        @keyframes cursor-fade-out {
-          0%   { opacity: 1; }
-          80%  { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        .typewriter-cursor-fade {
-          animation: cursor-fade-out 3.5s ease forwards;
-        }
+
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
         @keyframes msg-in {
           from { opacity: 0; transform: translateY(8px); }
@@ -305,11 +360,11 @@ export default function LandingPage() {
 
             <h1 className="hero-heading text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
               Your business,{' '}
+              <br className="hidden sm:block" />
               <span className="text-[#65fe08]">
-                always&nbsp;on.
-                {/* Typewriter cursor — blinks then fades out after 3.5s */}
+                {typedText}
                 <span
-                  className="typewriter-cursor typewriter-cursor-fade inline-block ml-0.5 w-[3px] h-[0.85em] align-middle bg-[#65fe08] rounded-sm"
+                  className="typewriter-cursor inline-block ml-0.5 w-[3px] h-[0.85em] align-middle bg-[#65fe08] rounded-sm"
                   aria-hidden="true"
                 />
               </span>
@@ -346,8 +401,8 @@ export default function LandingPage() {
                 <span className="ml-auto text-xs text-zinc-500">Online</span>
               </div>
 
-              {/* Messages — dynamically rendered */}
-              <div className="flex flex-col gap-3 p-4 min-h-[220px]">
+              {/* Messages — fixed height, auto-scrolls to bottom */}
+              <div ref={chatScrollRef} className="flex flex-col gap-3 p-4 h-[260px] overflow-y-auto scrollbar-none">
                 {visibleMessages.map((msg, idx) =>
                   msg.role === 'bot' ? (
                     <div key={idx} className="flex items-start gap-2 msg-appear">

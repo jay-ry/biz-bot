@@ -9,7 +9,7 @@ export const chunks = pgTable('chunks', {
   documentId: uuid('document_id').references(() => documents.id).notNull(),
   content:    text('content').notNull(),
   tokenCount: integer('token_count'),
-  embedding:  vector('embedding', { dimensions: 1536 }),
+  embedding:  vector('embedding', { dimensions: 768 }),
   createdAt:  timestamp('created_at').defaultNow(),
 }, (table) => ({
   embeddingIdx: index('embedding_idx').using('ivfflat', table.embedding.op('vector_cosine_ops')),

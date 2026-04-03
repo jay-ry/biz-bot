@@ -1,0 +1,70 @@
+<svg width="200" height="48" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Lime glow filter for the chat bubble -->
+    <filter id="lime-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feFlood flood-color="#65fe08" flood-opacity="0.55" result="color" />
+      <feComposite in="color" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <!-- Electric purple radial bg behind icon -->
+    <radialGradient id="purple-bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#bf00ff" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#bf00ff" stop-opacity="0" />
+    </radialGradient>
+    <!-- Maroon-to-transparent inner edge gradient on bubble -->
+    <linearGradient id="bubble-edge" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#550000" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#65fe08" stop-opacity="0.25" />
+    </linearGradient>
+    <!-- Cyan dot radial for accent dots -->
+    <radialGradient id="cyan-dot" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00ffff" />
+      <stop offset="100%" stop-color="#00ffff" stop-opacity="0.3" />
+    </radialGradient>
+  </defs>
+
+  <!-- Purple depth halo behind icon -->
+  <ellipse cx="24" cy="24" rx="20" ry="20" fill="url(#purple-bg)" />
+
+  <!-- Tiny cyan accent dots -->
+  <circle cx="5" cy="10" r="1.2" fill="url(#cyan-dot)" opacity="0.7" />
+  <circle cx="42" cy="8" r="0.9" fill="url(#cyan-dot)" opacity="0.5" />
+  <circle cx="8" cy="38" r="0.8" fill="url(#cyan-dot)" opacity="0.45" />
+
+  <!-- Chat bubble body with glow -->
+  <g filter="url(#lime-glow)">
+    <!-- Maroon border ring (slightly larger rounded rect) -->
+    <rect x="2.5" y="4.5" width="39" height="33" rx="7.5" ry="7.5" fill="url(#bubble-edge)" />
+    <!-- Dark bubble fill -->
+    <rect x="3.5" y="5.5" width="37" height="31" rx="6.5" ry="6.5" fill="#0d0d0d" />
+  </g>
+
+  <!-- Bubble tail (bottom-left triangle) -->
+  <polygon points="7,36 4,44 14,36" fill="#0d0d0d" />
+  <!-- Tail maroon border line -->
+  <polygon points="6,36 3,44.5 10,36" fill="url(#bubble-edge)" opacity="0.8" />
+
+  <!-- Terminal / processor lines inside bubble (lime green) -->
+  <!-- Line 1 — longest -->
+  <rect x="12" y="15" width="20" height="2.5" rx="1.25" fill="#65fe08" opacity="0.95" />
+  <!-- Line 2 — medium -->
+  <rect x="12" y="21" width="15" height="2.5" rx="1.25" fill="#65fe08" opacity="0.75" />
+  <!-- Line 3 — short -->
+  <rect x="12" y="27" width="10" height="2.5" rx="1.25" fill="#65fe08" opacity="0.55" />
+
+  <!-- Wordmark: "Biz" in light gray, "Bot" in lime green -->
+  <text
+    x="54"
+    y="32"
+    font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+    font-weight="700"
+    font-size="22"
+    letter-spacing="-0.3"
+  >
+    <tspan fill="#e8e8e8">Biz</tspan><tspan fill="#65fe08">Bot</tspan>
+  </text>
+</svg>
