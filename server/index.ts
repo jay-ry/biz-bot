@@ -5,6 +5,7 @@ import authRoutes from './routes/auth'
 import ingestRoutes from './routes/ingest'
 import widgetRoutes from './routes/widget'
 import copilotRoutes from './routes/copilotkit'
+import orgRoutes from './routes/org'
 
 const app = new Hono()
 
@@ -14,6 +15,7 @@ app.use('*', logger())
 app.use('/api/auth/*', cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:3000', credentials: true }))
 app.use('/api/ingest/*', cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:3000', credentials: true }))
 app.use('/api/copilotkit/*', cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:3000', credentials: true }))
+app.use('/api/org/*', cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:3000', credentials: true }))
 // Widget routes apply their own permissive CORS (origin: '*') inside the router.
 
 app.get('/api/health', (c) => c.json({ status: 'ok' }))
@@ -29,6 +31,9 @@ app.route('/api', widgetRoutes)
 
 // CopilotKit endpoint — accepts requests from the dashboard client.
 app.route('/api/copilotkit', copilotRoutes)
+
+// Org settings routes — protected by authMiddleware inside the sub-router.
+app.route('/api/org', orgRoutes)
 
 export default {
   port: process.env.PORT ?? 3001,
