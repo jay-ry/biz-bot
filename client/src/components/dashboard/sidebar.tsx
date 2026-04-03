@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Settings, Code } from 'lucide-react'
+import { LayoutDashboard, Settings, Code, BarChart2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -13,6 +13,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Analytics', href: '/dashboard/analytics', icon: BarChart2 },
   { label: 'Customize', href: '/dashboard/customize', icon: Settings },
   { label: 'Embed', href: '/dashboard/embed', icon: Code },
 ]
