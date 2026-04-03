@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── 1. TypeScript type-check ──────────────────────────────────────────────
+  typecheck:
+    name: TypeScript type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      # Single root-level install covers all workspace packages
+      - name: Install dependencies
+        run: bun install
+
+      # client uses the "typecheck" script (tsc --noEmit)
+      - name: Type-check client
+        run: cd client && bun run typecheck
+
+      # server has no tsc script; invoke tsc directly via bunx
+      - name: Type-check server
+        run: cd server && bunx tsc --noEmit
+
+  # ── 2. Lint ───────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      # client lint script runs eslint (script name: "lint")
+      - name: Lint client
+        run: cd client && bun run lint
+
+  # ── 3. Server tests ───────────────────────────────────────────────────────
+  #
+  # Integration tests require DATABASE_URL and JWT_SECRET to be set as
+  # GitHub repository secrets (Settings → Secrets and variables → Actions).
+  # Without DATABASE_URL the test files call process.exit(0) and the job
+  # passes without running any assertions — no real database is needed in CI
+  # unless you explicitly configure the secrets above.
+  #
+  test:
+    name: Server tests
+    runs-on: ubuntu-latest
+    env:
+      # Provide secrets if configured; tests self-skip when DATABASE_URL is absent
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run server tests
+        run: cd server && bun test
