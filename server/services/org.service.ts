@@ -3,15 +3,11 @@ import { organizations } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
 /**
- * Shape of the fields that callers may update via PATCH /api/org.
- * All fields are optional — only provided fields are applied to the row.
+ * Fields that callers may update via PATCH /api/org.
+ * Derived from Drizzle's inferred insert type so TypeScript catches
+ * column renames or schema drift automatically.
  */
-export interface OrgUpdates {
-  botName?: string
-  brandColor?: string
-  systemPrompt?: string
-  allowedOrigins?: string[]
-}
+export type OrgUpdates = Partial<Pick<typeof organizations.$inferInsert, 'botName' | 'brandColor' | 'systemPrompt' | 'allowedOrigins'>>
 
 /**
  * Retrieve a single organization by its primary key.
@@ -40,7 +36,10 @@ export async function getOrgById(orgId: string) {
 export async function updateOrg(orgId: string, updates: OrgUpdates) {
   // Build the set object with only the provided (non-undefined) fields.
   // Drizzle will throw if we pass an empty set, so we guard against that.
-  const set: Partial<typeof updates> = {}
+  // OrgUpdateSet mirrors OrgUpdates but is explicitly typed against the schema
+  // so Drizzle's .set() call stays type-safe without casting.
+  type OrgUpdateSet = Partial<Pick<typeof organizations.$inferInsert, 'botName' | 'brandColor' | 'systemPrompt' | 'allowedOrigins'>>
+  const set: OrgUpdateSet = {}
   if (updates.botName !== undefined)        set.botName        = updates.botName
   if (updates.brandColor !== undefined)     set.brandColor     = updates.brandColor
   if (updates.systemPrompt !== undefined)   set.systemPrompt   = updates.systemPrompt

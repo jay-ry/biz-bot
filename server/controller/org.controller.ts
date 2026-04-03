@@ -14,8 +14,8 @@ const patchOrgSchema = z.object({
   botName:        z.string().min(1).max(60).optional(),
   brandColor:     z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
   systemPrompt:   z.string().max(2000).optional(),
-  allowedOrigins: z.array(z.string()).optional(),
-})
+  allowedOrigins: z.array(z.string().url()).optional(),
+}).refine(obj => Object.keys(obj).length > 0, { message: 'At least one field must be provided' })
 
 /**
  * Maps an organization row to the public response shape.
