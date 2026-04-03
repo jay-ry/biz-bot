@@ -57,7 +57,8 @@ export async function getSummary(orgId: string, range: AnalyticsRange): Promise<
   const [msgResult] = await db
     .select({
       total: count(),
-      unanswered: sql<number>`COUNT(*) FILTER (WHERE ${messages.wasAnswered} = false)`,
+      // IS NOT DISTINCT FROM treats NULL the same as false — plain `= false` silently excludes NULLs in SQL
+      unanswered: sql<number>`COUNT(*) FILTER (WHERE ${messages.wasAnswered} IS NOT DISTINCT FROM false)`,
     })
     .from(messages)
     .where(
@@ -199,7 +200,8 @@ export async function getUnansweredMessages(orgId: string, limit: number): Promi
       and(
         eq(messages.orgId, orgId),
         eq(messages.role, 'user'),
-        eq(messages.wasAnswered, false),
+        // IS NOT DISTINCT FROM treats NULL the same as false — plain eq() silently excludes NULLs in SQL
+        sql`${messages.wasAnswered} IS NOT DISTINCT FROM false`,
       )
     )
     .orderBy(sql`${messages.createdAt} DESC`)

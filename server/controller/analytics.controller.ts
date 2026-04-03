@@ -24,12 +24,13 @@ const VALID_RANGES: AnalyticsRange[] = ['today', '7d', '30d']
 
 /**
  * Parse and validate the `range` query parameter.
- * Returns the range on success or a 400 Response on failure.
+ * Returns the range on success, or null if the value is invalid.
+ * Callers are responsible for returning a 400 response when null is returned.
  */
-function parseRange(c: Context): AnalyticsRange | Response {
+function parseRange(c: Context): AnalyticsRange | null {
   const raw = c.req.query('range') ?? '30d'
   if (!VALID_RANGES.includes(raw as AnalyticsRange)) {
-    return c.json({ error: `Invalid range. Must be one of: ${VALID_RANGES.join(', ')}` }, 400) as Response
+    return null
   }
   return raw as AnalyticsRange
 }
@@ -40,10 +41,12 @@ function parseRange(c: Context): AnalyticsRange | Response {
  */
 export async function handleGetSummary(c: Context): Promise<Response> {
   const { orgId } = c.get('user')
-  const rangeOrError = parseRange(c)
-  if (rangeOrError instanceof Response) return rangeOrError
+  const range = parseRange(c)
+  if (range === null) {
+    return c.json({ error: `Invalid range. Must be one of: ${VALID_RANGES.join(', ')}` }, 400)
+  }
 
-  const data = await getSummary(orgId, rangeOrError)
+  const data = await getSummary(orgId, range)
   return c.json(data)
 }
 
@@ -53,10 +56,12 @@ export async function handleGetSummary(c: Context): Promise<Response> {
  */
 export async function handleGetMessagesOverTime(c: Context): Promise<Response> {
   const { orgId } = c.get('user')
-  const rangeOrError = parseRange(c)
-  if (rangeOrError instanceof Response) return rangeOrError
+  const range = parseRange(c)
+  if (range === null) {
+    return c.json({ error: `Invalid range. Must be one of: ${VALID_RANGES.join(', ')}` }, 400)
+  }
 
-  const data = await getMessagesOverTime(orgId, rangeOrError)
+  const data = await getMessagesOverTime(orgId, range)
   return c.json(data)
 }
 
