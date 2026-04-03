@@ -3,7 +3,7 @@
 
   var script = document.currentScript;
   var token = script ? new URL(script.src).searchParams.get('token') : null;
-  if (!token) { console.warn('[BizBot] No token in script src'); return; }
+  if (!token) { console.warn('[BizBot] No token in script src. If using async or defer, remove those attributes.'); return; }
 
   var widgetOrigin = script ? new URL(script.src).origin : window.location.origin;
   var apiUrl = (script && script.dataset.api) || widgetOrigin;
@@ -31,6 +31,7 @@
   iframe.src = iframeSrc;
   iframe.setAttribute('allow', 'microphone');
   iframe.setAttribute('aria-label', 'BizBot chat widget');
+  iframe.setAttribute('title', 'BizBot chat widget');
   Object.assign(iframe.style, {
     position: 'fixed', bottom: '96px', right: '24px',
     width: '380px', height: '600px',
@@ -63,14 +64,31 @@
     if (!open) { btn.style.filter = ''; }
   });
 
-  // Close on mobile if viewport is narrow
+  // Close on mobile if viewport is narrow; debounced to avoid thrashing on rapid resize
+  var resizeTimer;
   window.addEventListener('resize', function () {
-    if (window.innerWidth < 480) {
-      Object.assign(iframe.style, { width: 'calc(100vw - 16px)', right: '8px', bottom: '88px' });
-    } else {
-      Object.assign(iframe.style, { width: '380px', right: '24px', bottom: '96px' });
-    }
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (window.innerWidth < 480) {
+        Object.assign(iframe.style, { width: 'calc(100vw - 16px)', right: '8px', bottom: '88px' });
+      } else {
+        Object.assign(iframe.style, { width: '380px', right: '24px', bottom: '96px' });
+      }
+    }, 100);
   });
+
+  /**
+   * Validates that a CSS color value is safe to inject into a style attribute.
+   * Accepts hex, rgb/rgba, hsl/hsla, and named colors.
+   * Rejects anything that could be used for CSS injection (e.g. values containing
+   * semicolons, parentheses outside rgb/hsl functions, or url() references).
+   *
+   * @param {string} value - The color string to validate
+   * @returns {boolean} True if the value is a recognized, safe CSS color format
+   */
+  function isSafeColor(value) {
+    return /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|[a-zA-Z]+)$/.test(String(value));
+  }
 
   /**
    * Apply the resolved brand color to the button and make it visible.
@@ -93,8 +111,12 @@
       return res.json();
     })
     .then(function (config) {
-      var color = (config && config.brandColor) ? config.brandColor : FALLBACK_COLOR;
-      applyBrandColor(color);
+      // Validate the brand color before writing it to a style attribute to prevent CSS injection
+      if (config && config.brandColor && isSafeColor(config.brandColor)) {
+        applyBrandColor(config.brandColor);
+      } else {
+        applyBrandColor(FALLBACK_COLOR);
+      }
     })
     .catch(function (err) {
       console.warn('[BizBot] Could not load widget config, using fallback color.', err);
