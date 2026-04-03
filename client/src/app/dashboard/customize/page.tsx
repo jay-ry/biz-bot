@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useOrg } from '@/hooks/use-org'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
+const DEFAULT_BRAND_COLOR = '#65fe08'
+
 export default function CustomizePage() {
-  const { org, loading, error, updateOrg } = useOrg()
+  const { org, loading, error, updateOrg, refresh } = useOrg()
 
   const [botName, setBotName] = useState('')
-  const [brandColor, setBrandColor] = useState('#65fe08')
+  const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR)
   const [systemPrompt, setSystemPrompt] = useState('')
   const [allowedOriginsText, setAllowedOriginsText] = useState('')
 
@@ -20,21 +22,38 @@ export default function CustomizePage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // Populate form once org data loads
+  const initialized = useRef(false)
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Populate form only on first load — prevents overwriting in-progress edits after saves
   useEffect(() => {
-    if (org) {
+    if (org && !initialized.current) {
+      initialized.current = true
       setBotName(org.botName ?? '')
-      setBrandColor(org.brandColor ?? '#65fe08')
+      setBrandColor(org.brandColor ?? DEFAULT_BRAND_COLOR)
       setSystemPrompt(org.systemPrompt ?? '')
       setAllowedOriginsText((org.allowedOrigins ?? []).join('\n'))
     }
   }, [org])
+
+  // Clear success timer on unmount to avoid state updates on unmounted components
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    }
+  }, [])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
     setSaveError(null)
     setSaveSuccess(false)
+
+    if (!/^#[0-9a-fA-F]{6}$/.test(brandColor)) {
+      setSaveError('Enter a full 6-digit hex color (e.g. #65fe08).')
+      setSaving(false)
+      return
+    }
 
     const allowedOrigins = allowedOriginsText
       .split('\n')
@@ -43,8 +62,9 @@ export default function CustomizePage() {
 
     try {
       await updateOrg({ botName, brandColor, systemPrompt, allowedOrigins })
+      if (successTimerRef.current) clearTimeout(successTimerRef.current)
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      successTimerRef.current = setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err: unknown) {
       const message = err && typeof err === 'object' && 'message' in err
         ? String((err as { message: unknown }).message)
@@ -66,9 +86,10 @@ export default function CustomizePage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <h1 className="text-2xl font-semibold text-white">Customize</h1>
         <p className="text-red-400 text-sm">{error}</p>
+        <Button variant="outline" onClick={refresh}>Try again</Button>
       </div>
     )
   }

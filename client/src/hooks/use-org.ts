@@ -27,11 +27,11 @@ export function useOrg() {
     refresh()
   }, [refresh])
 
-  async function update(data: OrgUpdateInput): Promise<OrgSettings> {
+  const update = useCallback(async (data: OrgUpdateInput): Promise<OrgSettings> => {
     const updated = await updateOrg(data)
     setOrg(updated)
     return updated
-  }
+  }, [])
 
   return { org, loading, error, updateOrg: update, refresh }
 }

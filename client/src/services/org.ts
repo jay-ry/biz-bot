@@ -23,7 +23,11 @@ export async function getOrg(): Promise<OrgSettings> {
   const res = await fetch(`${API}/api/org`, {
     headers: authHeaders(),
   })
-  if (!res.ok) throw await res.json()
+  if (!res.ok) {
+    let body: unknown
+    try { body = await res.json() } catch { body = {} }
+    throw body
+  }
   return res.json()
 }
 
@@ -33,6 +37,10 @@ export async function updateOrg(data: OrgUpdateInput): Promise<OrgSettings> {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw await res.json()
+  if (!res.ok) {
+    let body: unknown
+    try { body = await res.json() } catch { body = {} }
+    throw body
+  }
   return res.json()
 }
