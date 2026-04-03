@@ -25,10 +25,10 @@ import { eq } from 'drizzle-orm'
 
 // ---------------------------------------------------------------------------
 // App — use the Hono fetch handler directly; no HTTP server needed.
+// Dynamically imported inside beforeAll so the DATABASE_URL guard above runs
+// before any transitive module (e.g. chat.service.ts → openai SDK) is loaded.
 // ---------------------------------------------------------------------------
-import server from '../index'
-
-const { fetch: appFetch } = server
+let appFetch: (req: Request) => Promise<Response>
 
 /** Call the app in-process. */
 async function req(
@@ -61,6 +61,9 @@ let docId: string
 // Setup & Teardown
 // ---------------------------------------------------------------------------
 beforeAll(async () => {
+  const { default: serverModule } = await import('../index')
+  appFetch = serverModule.fetch
+
   const email = `smoke-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`
   token = await signUp(email, 'SmokePass123!', `Smoke Org ${Date.now()}`)
 

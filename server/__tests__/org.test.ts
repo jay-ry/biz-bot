@@ -9,6 +9,11 @@
  * via signUp() so tests are fully isolated.
  */
 
+if (!process.env.DATABASE_URL) {
+  console.warn('Skipping org tests: DATABASE_URL not set')
+  process.exit(0)
+}
+
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
 import { signUp } from '../services/auth.service'
 import { db } from '../db/connection'
@@ -17,11 +22,11 @@ import { eq } from 'drizzle-orm'
 
 // ---------------------------------------------------------------------------
 // App import — index.ts exports { port, fetch: app.fetch }.
-// We use that fetch handler directly so no HTTP server is needed.
+// Dynamically imported inside beforeAll to avoid TDZ issues from circular
+// dependencies introduced by Phase 4 analytics service additions, and to
+// ensure the DATABASE_URL guard above runs before any server module loads.
 // ---------------------------------------------------------------------------
-import server from '../index'
-
-const { fetch: appFetch } = server
+let appFetch: (req: Request) => Promise<Response>
 
 /** Helper: call the app in-process with a given method/url/headers/body. */
 async function req(
@@ -61,6 +66,14 @@ async function createTestUser(): Promise<{ token: string; orgId: string }> {
 
   return { token, orgId: payload.orgId }
 }
+
+// ---------------------------------------------------------------------------
+// Setup & Teardown
+// ---------------------------------------------------------------------------
+beforeAll(async () => {
+  const { default: serverModule } = await import('../index')
+  appFetch = serverModule.fetch
+})
 
 // ---------------------------------------------------------------------------
 // Clean up all test data after the suite runs
