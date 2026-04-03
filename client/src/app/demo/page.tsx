@@ -92,7 +92,7 @@ export default function DemoPage() {
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
-              href="/auth/signup"
+              href="/signup"
               className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500"
             >
               Get started free
