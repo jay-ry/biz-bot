@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Copy, Check } from 'lucide-react'
 
+const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'https://YOUR_DOMAIN'
+
 export default function EmbedPage() {
   const { org, loading, error, refresh } = useOrg()
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
 
   const snippet = org
-    ? `<script src="https://YOUR_DOMAIN/widget/launcher.js?token=${org.publicToken}" defer></script>`
+    ? `<script src="${baseUrl}/widget/launcher.js?token=${org.publicToken}" defer></script>`
     : ''
 
   async function handleCopy() {
@@ -21,7 +24,8 @@ export default function EmbedPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Clipboard API unavailable — silently ignore
+      setCopyError(true)
+      setTimeout(() => setCopyError(false), 3000)
     }
   }
 
@@ -89,10 +93,22 @@ export default function EmbedPage() {
             </Button>
           </div>
 
+          {copyError && (
+            <p className="text-xs text-red-400 mt-1">Could not copy — please select and copy the text manually.</p>
+          )}
+
           <p className="text-zinc-500 text-xs">
-            Replace{' '}
-            <span className="text-zinc-300 font-mono">YOUR_DOMAIN</span> with
-            the domain where your widget is hosted.
+            {baseUrl === 'https://YOUR_DOMAIN' ? (
+              <>
+                Replace{' '}
+                <span className="text-zinc-300 font-mono">YOUR_DOMAIN</span>{' '}
+                with the domain where your widget is hosted, or set{' '}
+                <span className="text-zinc-300 font-mono">NEXT_PUBLIC_API_URL</span>{' '}
+                in your environment.
+              </>
+            ) : (
+              <>The snippet uses your configured API URL.</>
+            )}
           </p>
         </CardContent>
       </Card>
