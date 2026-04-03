@@ -17,7 +17,7 @@ import { z } from 'zod'
 /** Zod schema for plain-text ingestion requests. */
 const textSchema = z.object({
   title: z.string().min(1).max(200),
-  content: z.string().min(10),
+  content: z.string().min(10).max(50000),
 })
 
 /**

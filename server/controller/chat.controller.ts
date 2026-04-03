@@ -33,6 +33,8 @@ const chatSchema = z.object({
  * @returns HTTP Response (streaming or JSON error).
  */
 export async function handleChat(c: Context): Promise<Response> {
+  const requestStart = Date.now()
+
   const body = await c.req.json().catch(() => null)
   const parsed = chatSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400)
@@ -60,6 +62,8 @@ export async function handleChat(c: Context): Promise<Response> {
         await textStream.writeln(`data: ${escaped}\n`)
       }
       await textStream.writeln('data: [DONE]\n')
+      const latencyMs = Date.now() - requestStart
+      console.log(JSON.stringify({ conversationId: convId, latencyMs, event: 'chat_complete' }))
     })
   } catch (err: unknown) {
     const e = err as { message?: string }

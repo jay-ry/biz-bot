@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
+import { sql } from 'drizzle-orm'
+import { db } from './db/connection'
 import authRoutes from './routes/auth'
 import ingestRoutes from './routes/ingest'
 import widgetRoutes from './routes/widget'
@@ -20,7 +22,14 @@ app.use('/api/org/*', cors({ origin: process.env.CLIENT_URL ?? 'http://localhost
 app.use('/api/analytics/*', cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:3000', credentials: true }))
 // Widget routes apply their own permissive CORS (origin: '*') inside the router.
 
-app.get('/api/health', (c) => c.json({ status: 'ok' }))
+app.get('/api/health', async (c) => {
+  try {
+    await db.execute(sql`SELECT 1`)
+    return c.json({ status: 'ok', db: 'ok' })
+  } catch {
+    return c.json({ status: 'degraded', db: 'error' }, 503)
+  }
+})
 
 // Auth routes are public — no authMiddleware applied here.
 app.route('/api/auth', authRoutes)
