@@ -24,9 +24,8 @@ jobs:
       - name: Type-check client
         run: cd client && bun run typecheck
 
-      # server has no tsc script; invoke tsc directly via bunx
       - name: Type-check server
-        run: cd server && bunx tsc --noEmit
+        run: cd server && bun run typecheck
 
   # ── 2. Lint ───────────────────────────────────────────────────────────────
   lint:
