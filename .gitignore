@@ -41,3 +41,6 @@ server/uploads/*
 
 # plans (local planning docs — not shipped)
 plan/
+
+# git worktrees
+.worktrees/
