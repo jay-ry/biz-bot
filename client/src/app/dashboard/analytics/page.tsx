@@ -169,6 +169,7 @@ export default function AnalyticsPage() {
       <section className="rounded-lg border border-zinc-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-zinc-800 bg-zinc-900">
           <h2 className="text-sm font-medium text-zinc-400">Unanswered Questions</h2>
+          <p className="mt-0.5 text-xs text-zinc-600">Last 50 unanswered questions (all time)</p>
         </div>
         {loading ? (
           <div className="bg-zinc-950 px-6 py-12 text-center text-sm text-zinc-600">Loading...</div>

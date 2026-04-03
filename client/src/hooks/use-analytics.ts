@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect, useCallback } from 'react'
 import {
   fetchSummary,
@@ -45,7 +43,8 @@ export function useAnalytics(range: AnalyticsRange): UseAnalyticsResult {
       setMessagesOverTime(overTimeData)
       setBusiestHours(hoursData)
       setUnanswered(unansweredData)
-    } catch {
+    } catch (err) {
+      console.error('Analytics fetch error:', err)
       setError('Failed to load analytics data.')
     } finally {
       setLoading(false)
